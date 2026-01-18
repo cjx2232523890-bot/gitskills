@@ -95,7 +95,7 @@ class DiscourseAnalyzer111:
         # 配置OpenAI API
         self.client = OpenAI(
             api_key=self.api_key,
-            timeout=10.0,
+            timeout=100.0,
             base_url=self.base_url
         )
 
@@ -151,10 +151,10 @@ class DiscourseAnalyzer111:
             print(f"读取Excel文件时出错: {str(e)}")
             return []
 
-    def classify_text(self, sentence):
+    def classify_text(self, target_sentence, context_str):
         """使用API对文本进行分类"""
         system_content = """
-    你是一个专业高效的文本分类器，请将以下课堂对话中的每个句子以一个对话轮次为单元分类到五大类及细分小类：
+    你是一个专业高效的文本分类器，请将以下课堂对话中的每个句子以一个对话轮次为单元分类到大类及细分小类：
      **必须跳过以下类型的语句：**
      1. 师生问候（如"同学们好"，"老师好"）
      2. 教师指令（如"上课"，"下课"，"请打开课本"，"开始讨论"）
@@ -175,31 +175,30 @@ class DiscourseAnalyzer111:
     分类定义：
 
    ### 知识理解
-   1. **观察记忆**：通过观察，从长时记忆中提取与呈现材料一致的知识或提取相关知识，包括再认和回忆，对应一些常识方面的知识和学科知识。
+   1. **观察记忆**：通过观察，从学习材料（文本、图表、公式、教师板书等）中直接提取或复述信息，不涉及任何推理或转述。这是对客观事实的“复制粘贴”式回忆。
                   例如："数学家欧几里得在几何原本提到了线面垂直的定义"、"三角形的内角和是180度"、"一条直线垂直平面上任意一条直线，那么我们就能得到该直线与平面垂直"
-   2. **概括理解**：把某些具有一些相同属性的事物抽取出本质属性，推广到具有这些属性的一切事物中，并正确地以多种方式表征数学知识（用数、图表、符号、图解或词语）。反映学生数学符号意义的概括、数量关系的概括、图形特征的概括以及简单关系和简单运算与推理的概括。
+   2. **概括理解**：用自己的语言对信息进行总结、归纳、转述或下定义，体现出对知识核心要义的把握，是将具体信息抽象化为普遍性概念或规则的过程。
                   例如："那我们看现在看一下刚才大家通过你的分析得到的这个概率跟我们这个频率的稳定值是否一致？我们来看一下它的概率是 1/ 2，然后稳定值0.5，一致吗？"
-   3. **说明论证**：指学生在记忆、概括的基础上，能够在知识内部，学生能提取相关知识，选择和运用简单的问题解决策略，使用基于不同信息来源的表征，对其进行直接推理，解释现实的问题。学生能将重要的和不重要的信息区分开来，然后专注于重要信息，根据数学规则、原理做出解释、推理、判断的能力。
+   3. **说明论证**：在知识讲解过程中，解释一个已知结论、计算过程或现象背后的原因，使用已有的定义、定理或逻辑关系来为某个观点提供支撑。
                   例如："那其实告诉我们什么？当实验的次数越来越多的时候，那么掷得点 6 这个事情大概需要平均需要几次就可以出现一次？"、"那我现在想问一下，能不能告诉我正面向上的概率是多少？"
    ### 表达交流
-   1. **经历经验**：表达个人在学习数学过程中的经历、实践经验或社会实践等，分享学习心得。
+   1. **经历经验**：表达个人在学习数学过程中的亲身经历、实践经验或社会见闻等，分享学习心得，不需要提供数学依据的对话。
                   例如："每大家在看体育比赛的时候，在关键时刻总是会出现屏住呼吸，特别紧张"、
-   2. **主观看法**：表达基于个人的经验、知识、情感等的观点或判断，这些观点不需要基于客观证据或事实。
+   2. **主观看法**：表达基于个人的经验、知识、情感等的观点或判断，这些观点不需要提供数学依据，也不需要基于客观证据或事实。
                   例如："好，我们看我们做这个实验，你有什么感觉？这个人回答什么感受？"
    3. **情感态度**：表达对事物的感受、态度和信念，如好奇心、兴趣、求知欲等。
 
    ### 实践应用
-   1. **分析计算**：能够在熟悉的数学问题情境中直接应用数学知识进行作图、列式、计算解决问题。在熟悉情境中，数学内容直接且呈现清晰的一步应用问题或简单的多步应用问题，以及几何领域有固定程序的作图问题、统计领域的统计图绘制问题。
-   2. **推测解释**：在较熟悉的实际任务情境中，学生能提取相关知识，选择和运用简单的问题解决策略，使用基于不同信息来源的表征，对其进行直接推理，解释现实的问题。
-   3. **简单问题解决**：在不熟悉的任务情境中，学生选择、提取有用的数学信息，自行组织数学策略，建立数学模型，解决问题并完整表达解决过程。问题一般包含较复杂或冗余的数学信息，学生需要根据问题情境提取有用的数学信息，选择适当的策略，寻找合适表征模式，通过较复杂的决策解决问题。
+   1. **分析计算**：在知识的简单应用环节，应用公式、算法或固定程序对具体数据进行运算/推导（含概率计算），直接得出数值、符号答案或确认关系成立。
+   2. **推测解释**：在较熟悉的实际任务情境中，学生能提取相关知识，阐释解题思路，需要呈现问题解决的思路或分析导向。
+   3. **简单问题解决**：综合运用所学知识，通过确定的方法解决问题，并完整阐述问题解决的过程。
                     例如："把旗杆抽象成一条直线，把地面抽象成平面"，"把桥成抽象成一条直线，把江面抽象成一个平面"
 
    ### 创造迁移
-   1. **综合问题解决**：指知识的综合、方法的多样化以及数学思想方法的综合运用。具有知识容量大、解题方法多、能力要求高、突显数学思想方法的运用以及要求学生具有一定的创新意识和创新能力等特点。   
-   2. **猜想探究**：指在开放的问题情境中，借助已有的知识经验，对数学材料进行加工，创造性解决问题。
+   1. **综合问题解决**：指知识的综合、方法的多样化以及数学思想方法的综合运用，解法具有开放性。具有知识容量大、解题方法多、能力要求高、突显数学思想方法的运用以及要求学生具有一定的创新意识和创新能力等特点。   
+   2. **猜想探究**：指在开放的问题情境中，在经历探究的基础上，对数学材料提出猜想或假设。
                   例如："黑板上的圆可以用。你可以尺规，也可以用刻度尺，我给你三角板了，都可以。我们先听前面两位同学跟大家介绍他们的做法和依据，然后咱们再来看。你先说你的，他先边画。"
-   3. **发现创新**：能够从已有知识和技能出发，通过猜想与合情推理构建知识之间的远联系，或提出发现新的好问题。。发现创新将涉及高水平概括，发现知识本质的联系；发现新的知识或规律；在多个概念进行联系。
-
+   3. **发现创新**：能够从已有知识和技能出发，提出不同于常规的、具有原创性的思路、想法或观点，或提出发现新的好问题。发现创新将涉及高水平概括，发现知识本质的联系；发现新的知识或规律；在多个概念进行联系。
 
    补充：
    1.知识理解补充：
@@ -210,14 +209,27 @@ class DiscourseAnalyzer111:
    3.创造迁移补充：
    对于不仅仅包含数学方面的，还涉及到生活上其他领域的各种复杂问题，可以归类为综合问题解决
     """
+        user_content = f"""
+            请结合以下上下文，对标记为 【>>> <<<】 的句子进行分类：
 
+            ============= 对话片段开始 =============
+            {context_str}
+            ============= 对话片段结束 =============
+
+            请返回【>>> {target_sentence} <<<】的分类结果：
+            """
         try:
             response = self.client.chat.completions.create(
-                model="qwen-turbo",
+                model="deepseek-v3",
                 messages=[
                     {"role": "system", "content": system_content},
-                    {"role": "user", "content": f"请分类以下课堂对话句子:\n{sentence}"}
-                ]
+                    {"role": "user", "content": user_content}
+                ],
+                temperature=0.1,  # 降低随机性，提高分类稳定性
+                top_p=0.8,
+                extra_body={
+                    "top_k": 1
+                }
             )
 
             result = response.choices[0].message.content.strip()
@@ -280,22 +292,49 @@ class DiscourseAnalyzer111:
         return cleaned
 
     def process_sentences(self):
-        """处理所有句子并进行分类，跳过的句子标记为其他但不计数"""
+        """处理所有句子并进行分类，每次参考上下文"""
+
+        # 定义上下文窗口大小（前后各参考多少行）
+        CONTEXT_WINDOW = 3
+        total_sentences = len(self.sentences)
+
         for i, sentence in enumerate(self.sentences):
             try:
-                if len(sentence) < 5:  # 跳过过短的句子
+                if len(sentence) < 2:  # 跳过极短的句子
                     self.output_lines.append(f"{sentence} | 其他 ")
                     continue
 
-                # 检查是否需要跳过
+                # 检查是否需要跳过（逻辑保持不变，但建议放宽一点，让模型去判断上下文）
                 if self.should_skip(sentence):
-                    print(f"跳过句子 {i + 1}/{len(self.sentences)}: {sentence[:50]}...")
+                    print(f"跳过句子 {i + 1}/{total_sentences}: {sentence[:20]}...")
                     self.output_lines.append(f"{sentence} | 其他 ")
                     continue
 
-                print(f"\n处理句子 {i + 1}/{len(self.sentences)}: {sentence[:50]}...")
-                raw_category = self.classify_text(sentence)
+                print(f"\n处理句子 {i + 1}/{total_sentences}...")
+
+                # === 构建上下文 ===
+                # 获取前 n 行
+                start_idx = max(0, i - CONTEXT_WINDOW)
+                # 获取后 n 行
+                end_idx = min(total_sentences, i + CONTEXT_WINDOW + 1)
+
+                context_lines = []
+                for j in range(start_idx, end_idx):
+                    curr_s = self.sentences[j]
+                    if j == i:
+                        # 核心修改：明确标记当前要分类的句子
+                        context_lines.append(f"【>>> {curr_s} <<<】   <-- 待分类目标")
+                    else:
+                        context_lines.append(f"{curr_s}")
+
+                context_str = "\n".join(context_lines)
+                # =================
+
+                # 调用修改后的 classify_text，传入上下文
+                raw_category = self.classify_text(sentence, context_str)
                 print(f"原始分类: {raw_category}")
+
+                # --- 以下逻辑保持原有代码不变 ---
 
                 # 清洗分类结果
                 cleaned_category = self.clean_category(raw_category)
@@ -311,7 +350,7 @@ class DiscourseAnalyzer111:
                     self.output_lines.append(f"{sentence} | {main_category} | {cleaned_category}")
                     matched = True
                 else:
-                    # 2. 部分匹配 - 尝试匹配已知小类的部分
+                    # 2. 部分匹配
                     for known_sub in self.SUBCATEGORIES.keys():
                         if known_sub in cleaned_category or cleaned_category in known_sub:
                             print(f"部分匹配: '{cleaned_category}' -> '{known_sub}'")
@@ -321,9 +360,9 @@ class DiscourseAnalyzer111:
                             matched = True
                             break
 
-                # 3. 未匹配处理 - 标记为其他
+                # 3. 未匹配处理
                 if not matched:
-                    print(f"! 无法识别分类: '{cleaned_category}' (原始返回: '{raw_category}')")
+                    print(f"! 无法识别分类: '{cleaned_category}'")
                     self.output_lines.append(f"{sentence} | 其他 | 其他")
 
             except Exception as e:
@@ -758,8 +797,8 @@ class DiscourseAnalyzer111:
 if __name__ == "__main__":
     # 初始化分析器
     API_KEY = "sk-358a054218ff4741a254022eeeb56b04"
-    INPUT_FILE = r"C:\Users\ym\Desktop\22\探索视觉与逻辑的奇妙交汇.csv"
-    OUTPUT_DIR = r"C:\Users\ym\Desktop\22"
+    INPUT_FILE = r"C:\Users\ym\Desktop\优质课\2121.csv"
+    OUTPUT_DIR = r"C:\Users\ym\Desktop\优质课分类结果"
 
     time_stamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     t1 = time.time()
